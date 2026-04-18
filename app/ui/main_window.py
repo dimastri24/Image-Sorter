@@ -1,3 +1,4 @@
+import os
 from tkinter import BOTH, END, Button, Entry, Frame, Label, Listbox, Tk, filedialog, messagebox
 
 from PIL import Image, ImageTk
@@ -109,9 +110,10 @@ class MainWindow:
 
     def add_folder(self) -> None:
         folder_name = self.new_folder_entry.get()
-        if self.image_service.add_target_folder(folder_name):
+        if self.image_service.create_target_folder(folder_name):
             self.update_folder_list()
             self.new_folder_entry.delete(0, END)
+        self.show_pending_message()
 
     def remove_folder(self) -> None:
         selected_folder = self.get_selected_folder()
@@ -121,7 +123,7 @@ class MainWindow:
     def update_folder_list(self) -> None:
         self.folder_list.delete(0, END)
         for folder in self.image_service.target_folders:
-            self.folder_list.insert(END, folder)
+            self.folder_list.insert(END, self.get_folder_display_name(folder))
 
     def show_next_image(self) -> None:
         image_path = self.image_service.get_next_image_path()
@@ -147,7 +149,7 @@ class MainWindow:
         if not selection:
             return None
 
-        return self.folder_list.get(selection[0])
+        return self.image_service.target_folders[selection[0]]
 
     def quit(self) -> None:
         self.root.destroy()
@@ -156,3 +158,10 @@ class MainWindow:
         message = self.image_service.consume_pending_message()
         if message:
             messagebox.showerror("Error", message)
+
+    def get_folder_display_name(self, folder: str) -> str:
+        normalized_folder = folder.rstrip("\\/")
+        folder_name = os.path.basename(normalized_folder)
+        if folder_name:
+            return folder_name
+        return folder

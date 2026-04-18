@@ -2,6 +2,7 @@ from pathlib import Path
 
 from ..config.settings import CONFIG_JSON_FILE, LEGACY_CONFIG_FILE
 from ..utils.file_utils import (
+    ensure_directory,
     list_file_names,
     move_file,
     read_json_list,
@@ -35,10 +36,36 @@ class ImageService:
 
     def add_target_folder(self, folder: str) -> bool:
         folder_name = folder.strip()
-        if not folder_name or folder_name in self.target_folders:
+        if not folder_name:
+            return False
+
+        folder_path = Path(folder_name)
+        if folder_path.is_absolute():
+            folder_name = str(folder_path.resolve())
+
+        if folder_name in self.target_folders:
             return False
 
         self.target_folders.append(folder_name)
+        self.save_target_folders()
+        return True
+
+    def create_target_folder(self, folder_name: str) -> bool:
+        clean_folder_name = folder_name.strip()
+        if not clean_folder_name:
+            return False
+
+        if self.root_folder is None:
+            self.pending_message = "Please select a source folder first."
+            return False
+
+        folder_path = (self.root_folder / clean_folder_name).resolve()
+        folder_as_text = str(folder_path)
+        if folder_as_text in self.target_folders:
+            return False
+
+        ensure_directory(folder_path)
+        self.target_folders.append(folder_as_text)
         self.save_target_folders()
         return True
 
