@@ -1,7 +1,13 @@
 from pathlib import Path
 
-from ..config.settings import CONFIG_FILE, DEFAULT_TARGET_FOLDERS
-from ..utils.file_utils import list_file_names, move_file, read_lines, write_lines
+from ..config.settings import CONFIG_JSON_FILE, LEGACY_CONFIG_FILE
+from ..utils.file_utils import (
+    list_file_names,
+    move_file,
+    read_json_list,
+    read_lines,
+    write_json_list,
+)
 
 
 class ImageService:
@@ -10,16 +16,22 @@ class ImageService:
         self.images: list[str] = []
         self.image_index = 0
         self.current_image_name: str | None = None
+        self.pending_message: str | None = None
         self.target_folders = self.load_target_folders()
 
     def load_target_folders(self) -> list[str]:
-        stored_folders = read_lines(CONFIG_FILE)
-        if stored_folders:
-            return stored_folders
-        return DEFAULT_TARGET_FOLDERS.copy()
+        if CONFIG_JSON_FILE.exists():
+            return read_json_list(CONFIG_JSON_FILE)
+
+        write_json_list(CONFIG_JSON_FILE, [])
+
+        if LEGACY_CONFIG_FILE.exists():
+            return self._attempt_legacy_conversion()
+
+        return []
 
     def save_target_folders(self) -> None:
-        write_lines(CONFIG_FILE, self.target_folders)
+        write_json_list(CONFIG_JSON_FILE, self.target_folders)
 
     def add_target_folder(self, folder: str) -> bool:
         folder_name = folder.strip()
@@ -44,6 +56,7 @@ class ImageService:
             return False
 
         self.root_folder = folder_path
+        self._attempt_legacy_conversion()
         self.images = list_file_names(folder_path)
         self.image_index = 0
         self.current_image_name = None
@@ -81,3 +94,29 @@ class ImageService:
             return target_path
 
         return self.root_folder / target_path
+
+    def consume_pending_message(self) -> str | None:
+        message = self.pending_message
+        self.pending_message = None
+        return message
+
+    def _attempt_legacy_conversion(self) -> list[str]:
+        if not LEGACY_CONFIG_FILE.exists():
+            return self.target_folders if hasattr(self, "target_folders") else []
+
+        if self.root_folder is None:
+            self.pending_message = (
+                "Please select a source folder before converting target folders."
+            )
+            return []
+
+        converted_folders: list[str] = []
+        for folder in read_lines(LEGACY_CONFIG_FILE):
+            folder_path = Path(folder)
+            if not folder_path.is_absolute():
+                folder_path = self.root_folder / folder_path
+            converted_folders.append(str(folder_path.resolve()))
+
+        self.target_folders = converted_folders
+        self.save_target_folders()
+        return converted_folders

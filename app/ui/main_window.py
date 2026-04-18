@@ -1,4 +1,4 @@
-from tkinter import BOTH, END, Button, Entry, Frame, Label, Listbox, Tk, filedialog
+from tkinter import BOTH, END, Button, Entry, Frame, Label, Listbox, Tk, filedialog, messagebox
 
 from PIL import Image, ImageTk
 
@@ -14,6 +14,7 @@ class MainWindow:
 
         self._build_layout()
         self.update_folder_list()
+        self.show_pending_message()
 
     def _build_layout(self) -> None:
         left_frame = Frame(self.root)
@@ -91,7 +92,11 @@ class MainWindow:
         if not folder:
             return
 
-        if self.image_service.set_root_folder(folder) and self.image_service.has_images():
+        if self.image_service.set_root_folder(folder):
+            self.update_folder_list()
+            self.show_pending_message()
+
+        if self.image_service.has_images():
             self.show_next_image()
 
     def select_existing_folder(self) -> None:
@@ -146,3 +151,8 @@ class MainWindow:
 
     def quit(self) -> None:
         self.root.destroy()
+
+    def show_pending_message(self) -> None:
+        message = self.image_service.consume_pending_message()
+        if message:
+            messagebox.showerror("Error", message)

@@ -6,3 +6,6 @@ __pycache__/
 .Python
 build/
 dist/
+
+config-target.json
+config-target.txt

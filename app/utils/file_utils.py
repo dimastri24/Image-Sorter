@@ -1,3 +1,4 @@
+import json
 import shutil
 from pathlib import Path
 
@@ -14,6 +15,24 @@ def write_lines(path: Path, lines: list[str]) -> None:
     with path.open("w", encoding="utf-8") as file:
         for line in lines:
             file.write(f"{line}\n")
+
+
+def read_json_list(path: Path) -> list[str]:
+    if not path.exists():
+        return []
+
+    with path.open("r", encoding="utf-8") as file:
+        data = json.load(file)
+
+    if isinstance(data, list):
+        return [item for item in data if isinstance(item, str)]
+
+    return []
+
+
+def write_json_list(path: Path, items: list[str]) -> None:
+    with path.open("w", encoding="utf-8") as file:
+        json.dump(items, file, indent=2)
 
 
 def list_file_names(folder: Path) -> list[str]:
