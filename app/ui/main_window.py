@@ -1,5 +1,17 @@
 import os
-from tkinter import BOTH, END, Button, Entry, Frame, Label, Listbox, Tk, filedialog, messagebox
+from tkinter import (
+    BOTH,
+    END,
+    Button,
+    Entry,
+    Frame,
+    Label,
+    Listbox,
+    StringVar,
+    Tk,
+    filedialog,
+    messagebox,
+)
 
 from PIL import Image, ImageTk
 
@@ -12,6 +24,8 @@ class MainWindow:
         self.root = root
         self.image_service = image_service
         self.current_photo: ImageTk.PhotoImage | None = None
+        self.folder_query = StringVar()
+        self.filtered_folders: list[str] = []
 
         self._build_layout()
         self.update_folder_list()
@@ -46,7 +60,7 @@ class MainWindow:
 
         self.add_folder_button = Button(
             folder_button_frame,
-            text="Add",
+            text="Add Folder",
             command=self.add_folder,
         )
         self.add_folder_button.pack(side="left")
@@ -58,8 +72,18 @@ class MainWindow:
         )
         self.remove_folder_button.pack(side="left")
 
-        self.new_folder_entry = Entry(right_frame, width=30)
+        self.new_folder_entry = Entry(
+            right_frame,
+            width=30,
+            textvariable=self.folder_query,
+        )
         self.new_folder_entry.pack()
+        self.new_folder_entry.bind("<KeyRelease>", self.on_folder_query_changed)
+
+        self.add_folder_hint = Label(
+            right_frame,
+            text='No match found. Use "Add Folder".',
+        )
 
         self.folder_list = Listbox(right_frame, width=30)
         self.folder_list.pack()
@@ -109,10 +133,10 @@ class MainWindow:
             self.update_folder_list()
 
     def add_folder(self) -> None:
-        folder_name = self.new_folder_entry.get()
+        folder_name = self.folder_query.get()
         if self.image_service.create_target_folder(folder_name):
+            self.folder_query.set("")
             self.update_folder_list()
-            self.new_folder_entry.delete(0, END)
         self.show_pending_message()
 
     def remove_folder(self) -> None:
@@ -122,8 +146,10 @@ class MainWindow:
 
     def update_folder_list(self) -> None:
         self.folder_list.delete(0, END)
-        for folder in self.image_service.target_folders:
+        self.filtered_folders = self.get_filtered_folders()
+        for folder in self.filtered_folders:
             self.folder_list.insert(END, self.get_folder_display_name(folder))
+        self.update_add_folder_state()
 
     def show_next_image(self) -> None:
         image_path = self.image_service.get_next_image_path()
@@ -149,7 +175,7 @@ class MainWindow:
         if not selection:
             return None
 
-        return self.image_service.target_folders[selection[0]]
+        return self.filtered_folders[selection[0]]
 
     def quit(self) -> None:
         self.root.destroy()
@@ -165,3 +191,27 @@ class MainWindow:
         if folder_name:
             return folder_name
         return folder
+
+    def on_folder_query_changed(self, _event: object | None = None) -> None:
+        self.update_folder_list()
+
+    def get_filtered_folders(self) -> list[str]:
+        query = self.folder_query.get().strip().lower()
+        if not query:
+            return list(self.image_service.target_folders)
+
+        filtered_folders: list[str] = []
+        for folder in self.image_service.target_folders:
+            if query in self.get_folder_display_name(folder).lower():
+                filtered_folders.append(folder)
+        return filtered_folders
+
+    def update_add_folder_state(self) -> None:
+        query = self.folder_query.get().strip()
+        should_show_hint = bool(query) and not self.filtered_folders
+
+        if should_show_hint:
+            self.add_folder_hint.pack()
+            return
+
+        self.add_folder_hint.pack_forget()
