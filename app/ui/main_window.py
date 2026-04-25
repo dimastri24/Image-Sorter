@@ -19,7 +19,12 @@ from tkinter import (
 
 from PIL import Image, ImageOps, ImageTk
 
-from ..config.settings import SOURCE_PREVIEW_SIZE, THUMBNAIL_SIZE
+from ..config.settings import (
+    FOLDER_CARD_PREVIEW_SIZE,
+    FOLDER_GRID_COLUMN_RANGE,
+    SOURCE_PREVIEW_SIZE,
+    THUMBNAIL_SIZE,
+)
 from ..services.image_service import ImageService
 
 
@@ -32,6 +37,7 @@ class MainWindow:
         self.filtered_folders: list[str] = []
         self.selected_folder: str | None = None
         self.folder_preview_cache: dict[str, ImageTk.PhotoImage] = {}
+        self.folder_grid_columns = FOLDER_GRID_COLUMN_RANGE[0]
 
         self._build_layout()
         self.update_folder_list()
@@ -120,7 +126,7 @@ class MainWindow:
         )
 
         folder_browser_frame = Frame(right_frame)
-        folder_browser_frame.pack(fill=BOTH, expand=True, pady=(8, 12))
+        folder_browser_frame.pack(fill=BOTH, expand=True, pady=(0, 12))
 
         self.folder_canvas = Canvas(folder_browser_frame, highlightthickness=0)
         self.folder_canvas.pack(side=LEFT, fill=BOTH, expand=True)
@@ -141,6 +147,8 @@ class MainWindow:
         )
         self.folder_grid.bind("<Configure>", self.on_folder_grid_configure)
         self.folder_canvas.bind("<Configure>", self.on_folder_canvas_configure)
+        self.bind_folder_browser_scroll(self.folder_canvas)
+        self.bind_folder_browser_scroll(self.folder_grid)
 
         action_button_frame = Frame(right_frame)
         action_button_frame.pack(anchor="w", pady=(0, 8))
@@ -207,14 +215,19 @@ class MainWindow:
         for child in self.folder_grid.winfo_children():
             child.destroy()
 
+        column_count = self.get_folder_grid_column_count()
+        self.folder_grid_columns = column_count
+
         for index, folder in enumerate(self.filtered_folders):
-            row = index // 2
-            column = index % 2
+            row = index // column_count
+            column = index % column_count
             card = self.create_folder_card(self.folder_grid, folder)
             card.grid(row=row, column=column, padx=8, pady=8, sticky="nsew")
 
-        for column in range(2):
-            self.folder_grid.grid_columnconfigure(column, weight=1)
+        max_columns = FOLDER_GRID_COLUMN_RANGE[1]
+        for column in range(max_columns):
+            weight = 1 if column < column_count else 0
+            self.folder_grid.grid_columnconfigure(column, weight=weight)
 
         self.update_add_folder_state()
         self.folder_canvas.yview_moveto(0)
@@ -284,25 +297,48 @@ class MainWindow:
 
     def create_folder_card(self, parent: Frame, folder: str) -> Frame:
         is_selected = folder == self.selected_folder
-        relief = "solid" if is_selected else "groove"
-        border_width = 2 if is_selected else 1
-
-        card = Frame(parent, bd=border_width, relief=relief, padx=8, pady=8)
+        highlight_color = "#2f6fed" if is_selected else "#d6d9df"
+        card = Frame(
+            parent,
+            bd=0,
+            highlightthickness=2 if is_selected else 1,
+            highlightbackground=highlight_color,
+            highlightcolor=highlight_color,
+            padx=0,
+            pady=0,
+        )
 
         preview_image = self.get_folder_preview_image(folder)
-        preview_label = Label(card, image=preview_image, width=120, height=120)
+        preview_width, preview_height = FOLDER_CARD_PREVIEW_SIZE
+        preview_frame = Frame(card, width=preview_width, height=preview_height)
+        preview_frame.pack(fill="x", expand=True)
+        preview_frame.pack_propagate(False)
+
+        preview_label = Label(
+            preview_frame,
+            image=preview_image,
+            width=preview_width,
+            height=preview_height,
+            bd=0,
+        )
         preview_label.image = preview_image
-        preview_label.pack()
+        preview_label.pack(fill=BOTH, expand=True)
 
         folder_name_label = Label(
-            card,
+            preview_frame,
             text=self.get_folder_display_name(folder),
-            wraplength=120,
-            justify="center",
+            wraplength=preview_width - 24,
+            justify="left",
+            anchor="w",
+            bg="#111827",
+            fg="#ffffff",
+            padx=12,
+            pady=8,
         )
-        folder_name_label.pack(pady=(8, 0))
+        folder_name_label.place(relx=0, rely=1, relwidth=1, anchor="sw")
 
         self.bind_folder_selection(card, folder)
+        self.bind_folder_selection(preview_frame, folder)
         self.bind_folder_selection(preview_label, folder)
         self.bind_folder_selection(folder_name_label, folder)
         return card
@@ -310,20 +346,92 @@ class MainWindow:
     def bind_folder_selection(self, widget: Frame | Label, folder: str) -> None:
         widget.bind("<Button-1>", lambda _event, value=folder: self.select_folder_card(value))
 
+    def bind_folder_browser_scroll(self, widget: Frame | Canvas) -> None:
+        widget.bind("<Enter>", self.activate_folder_browser_scroll)
+        widget.bind("<Leave>", self.deactivate_folder_browser_scroll)
+
     def select_folder_card(self, folder: str) -> None:
         self.selected_folder = folder
         self.update_folder_list()
+
+    def activate_folder_browser_scroll(self, _event: object | None = None) -> None:
+        self.root.bind_all("<MouseWheel>", self.on_folder_browser_mousewheel)
+        self.root.bind_all("<Button-4>", self.on_folder_browser_mousewheel)
+        self.root.bind_all("<Button-5>", self.on_folder_browser_mousewheel)
+
+    def deactivate_folder_browser_scroll(self, _event: object | None = None) -> None:
+        pointer_widget = self.root.winfo_containing(
+            self.root.winfo_pointerx(),
+            self.root.winfo_pointery(),
+        )
+        if pointer_widget and self.is_folder_browser_widget(pointer_widget):
+            return
+
+        self.root.unbind_all("<MouseWheel>")
+        self.root.unbind_all("<Button-4>")
+        self.root.unbind_all("<Button-5>")
+
+    def is_folder_browser_widget(self, widget: object) -> bool:
+        current = widget
+        while current is not None:
+            if current in {self.folder_canvas, self.folder_grid}:
+                return True
+            current = getattr(current, "master", None)
+        return False
+
+    def on_folder_browser_mousewheel(self, event: object) -> str | None:
+        if not self.folder_browser_has_overflow():
+            return "break"
+
+        delta = getattr(event, "delta", 0)
+        if delta:
+            scroll_units = -int(delta / 120) if abs(delta) >= 120 else (-1 if delta > 0 else 1)
+            self.folder_canvas.yview_scroll(scroll_units, "units")
+            return "break"
+
+        num = getattr(event, "num", None)
+        if num == 4:
+            self.folder_canvas.yview_scroll(-1, "units")
+            return "break"
+        if num == 5:
+            self.folder_canvas.yview_scroll(1, "units")
+            return "break"
+        return None
+
+    def folder_browser_has_overflow(self) -> bool:
+        scroll_region = self.folder_canvas.bbox("all")
+        if scroll_region is None:
+            return False
+
+        _, top, _, bottom = scroll_region
+        content_height = bottom - top
+        visible_height = self.folder_canvas.winfo_height()
+        return content_height > visible_height
+
+    def get_folder_grid_column_count(self) -> int:
+        min_columns, max_columns = FOLDER_GRID_COLUMN_RANGE
+        available_width = self.folder_canvas.winfo_width()
+        card_width, _ = FOLDER_CARD_PREVIEW_SIZE
+        card_spacing = 16
+        minimum_column_width = card_width + card_spacing
+
+        if available_width <= 1:
+            return min_columns
+
+        column_count = available_width // minimum_column_width
+        return max(min_columns, min(max_columns, column_count))
 
     def get_folder_preview_image(self, folder: str) -> ImageTk.PhotoImage:
         if folder in self.folder_preview_cache:
             return self.folder_preview_cache[folder]
 
         preview_path = self.get_preview_image_path(folder)
+        preview_size = FOLDER_CARD_PREVIEW_SIZE
         if preview_path is None:
-            image = Image.new("RGB", (120, 120), color="#d9d9d9")
+            image = Image.new("RGB", preview_size, color="#d9d9d9")
         else:
             with Image.open(preview_path) as opened_image:
-                image = ImageOps.fit(opened_image.convert("RGB"), (120, 120))
+                image = ImageOps.fit(opened_image.convert("RGB"), preview_size)
 
         preview_image = ImageTk.PhotoImage(image)
         self.folder_preview_cache[folder] = preview_image
@@ -349,3 +457,6 @@ class MainWindow:
     def on_folder_canvas_configure(self, event: object) -> None:
         width = getattr(event, "width", 0)
         self.folder_canvas.itemconfigure(self.folder_canvas_window, width=width)
+        new_column_count = self.get_folder_grid_column_count()
+        if new_column_count != self.folder_grid_columns:
+            self.update_folder_list()

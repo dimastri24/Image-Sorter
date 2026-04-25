@@ -3,6 +3,8 @@ from pathlib import Path
 APP_TITLE = "Image Sorter"
 INITIAL_WINDOW_SIZE = (1200, 720)
 SOURCE_PREVIEW_SIZE = (420, 420)
+FOLDER_CARD_PREVIEW_SIZE = (220, 140)
+FOLDER_GRID_COLUMN_RANGE = (2, 5)
 THUMBNAIL_SIZE = (300, 300)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
