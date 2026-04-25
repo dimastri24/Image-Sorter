@@ -29,6 +29,10 @@ from ..services.image_service import ImageService
 
 
 class MainWindow:
+    SEARCH_INPUT_BORDER_COLOR = "#c7d0dd"
+    SEARCH_INPUT_FOCUS_COLOR = "#2f6fed"
+    SEARCH_INPUT_BG_COLOR = "#f8fafc"
+
     def __init__(self, root: Tk, image_service: ImageService) -> None:
         self.root = root
         self.image_service = image_service
@@ -140,13 +144,38 @@ class MainWindow:
         )
         self.remove_folder_button.pack(side="left")
 
-        self.new_folder_entry = Entry(
+        self.search_entry_container = Frame(
             right_frame,
-            width=30,
-            textvariable=self.folder_query,
+            bg=self.SEARCH_INPUT_BORDER_COLOR,
+            highlightthickness=0,
+            bd=0,
+            padx=1,
+            pady=1,
         )
-        self.new_folder_entry.pack(fill="x", pady=(0, 8))
+        self.search_entry_container.pack(fill="x", pady=(0, 8))
+
+        search_entry_inner = Frame(
+            self.search_entry_container,
+            bg=self.SEARCH_INPUT_BG_COLOR,
+            padx=12,
+            pady=8,
+        )
+        search_entry_inner.pack(fill="x")
+
+        self.new_folder_entry = Entry(
+            search_entry_inner,
+            textvariable=self.folder_query,
+            relief="flat",
+            borderwidth=0,
+            highlightthickness=0,
+            bg=self.SEARCH_INPUT_BG_COLOR,
+            insertbackground="#111827",
+            font=("Segoe UI", 10),
+        )
+        self.new_folder_entry.pack(fill="x")
         self.new_folder_entry.bind("<KeyRelease>", self.on_folder_query_changed)
+        self.new_folder_entry.bind("<FocusIn>", self.on_search_entry_focus_in)
+        self.new_folder_entry.bind("<FocusOut>", self.on_search_entry_focus_out)
 
         self.add_folder_hint = Label(
             right_frame,
@@ -290,6 +319,12 @@ class MainWindow:
 
     def on_folder_query_changed(self, _event: object | None = None) -> None:
         self.update_folder_list()
+
+    def on_search_entry_focus_in(self, _event: object | None = None) -> None:
+        self.search_entry_container.config(bg=self.SEARCH_INPUT_FOCUS_COLOR)
+
+    def on_search_entry_focus_out(self, _event: object | None = None) -> None:
+        self.search_entry_container.config(bg=self.SEARCH_INPUT_BORDER_COLOR)
 
     def get_filtered_folders(self) -> list[str]:
         query = self.folder_query.get().strip().lower()
