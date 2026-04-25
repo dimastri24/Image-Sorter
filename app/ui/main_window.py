@@ -24,18 +24,19 @@ from ..config.settings import (
     FOLDER_GRID_COLUMN_RANGE,
     SOURCE_PREVIEW_SIZE,
     THUMBNAIL_SIZE,
+    UI_STYLE,
 )
 from ..services.image_service import ImageService
 
 
 class MainWindow:
-    SEARCH_INPUT_BORDER_COLOR = "#c7d0dd"
-    SEARCH_INPUT_FOCUS_COLOR = "#2f6fed"
-    SEARCH_INPUT_BG_COLOR = "#f8fafc"
-
     def __init__(self, root: Tk, image_service: ImageService) -> None:
         self.root = root
         self.image_service = image_service
+        self.styles = UI_STYLE
+        self.colors = UI_STYLE["colors"]
+        self.fonts = UI_STYLE["fonts"]
+        self.spacing = UI_STYLE["spacing"]
         self.current_photo: ImageTk.PhotoImage | None = None
         self.folder_query = StringVar()
         self.filtered_folders: list[str] = []
@@ -48,10 +49,14 @@ class MainWindow:
         self.show_pending_message()
 
     def _build_layout(self) -> None:
-        section_padding_x = 20
-        section_padding_y = 16
+        section_padding_x = self.spacing["section_x"]
+        section_padding_y = self.spacing["section_y"]
+        control_gap = self.spacing["control_gap"]
+        section_gap = self.spacing["section_gap"]
 
-        left_frame = Frame(self.root)
+        self.root.configure(bg=self.colors["app_bg"])
+
+        left_frame = Frame(self.root, bg=self.colors["panel_bg"])
         left_frame.pack(
             side="left",
             fill=BOTH,
@@ -64,16 +69,20 @@ class MainWindow:
             left_frame,
             text="Select Image Folder",
             command=self.select_image_folder,
+            **self.get_button_style("primary"),
         )
-        self.select_image_folder_button.pack(anchor="w", pady=(12, 16))
+        self.select_image_folder_button.pack(anchor="w", pady=(12, section_gap + 4))
 
         preview_width, preview_height = SOURCE_PREVIEW_SIZE
         self.source_preview_frame = Frame(
             left_frame,
             width=preview_width,
             height=preview_height,
+            bg=self.colors["surface_bg"],
+            highlightthickness=1,
+            highlightbackground=self.colors["border"],
         )
-        self.source_preview_frame.pack(anchor="n", pady=(0, 16))
+        self.source_preview_frame.pack(anchor="n", pady=(0, section_padding_y))
         self.source_preview_frame.pack_propagate(False)
 
         self.image_label = Label(
@@ -81,26 +90,31 @@ class MainWindow:
             width=preview_width,
             height=preview_height,
             text="Select an image folder to begin.",
+            bg=self.colors["surface_muted"],
+            fg=self.colors["text_muted"],
+            font=self.fonts["body"],
         )
         self.image_label.pack(fill=BOTH, expand=True)
 
-        navigation_button_frame = Frame(left_frame)
+        navigation_button_frame = Frame(left_frame, bg=self.colors["panel_bg"])
         navigation_button_frame.pack(fill="x", pady=(0, 8))
 
-        navigation_left_frame = Frame(navigation_button_frame)
+        navigation_left_frame = Frame(navigation_button_frame, bg=self.colors["panel_bg"])
         navigation_left_frame.pack(side="left")
 
         self.back_button = Button(
             navigation_left_frame,
             text="Back",
             command=self.show_previous_image,
+            **self.get_button_style("secondary"),
         )
-        self.back_button.pack(side="left", padx=(0, 8))
+        self.back_button.pack(side="left", padx=(0, control_gap))
 
         self.skip_button = Button(
             navigation_left_frame,
             text="Skip",
             command=self.show_next_image,
+            **self.get_button_style("secondary"),
         )
         self.skip_button.pack(side="left")
 
@@ -108,10 +122,11 @@ class MainWindow:
             navigation_button_frame,
             text="Move Image",
             command=self.move_and_show_next,
+            **self.get_button_style("primary"),
         )
         self.move_button.pack(side="right")
 
-        right_frame = Frame(self.root)
+        right_frame = Frame(self.root, bg=self.colors["panel_bg"])
         right_frame.pack(
             side="right",
             fill=BOTH,
@@ -120,33 +135,36 @@ class MainWindow:
             pady=section_padding_y,
         )
 
-        folder_button_frame = Frame(right_frame)
-        folder_button_frame.pack(anchor="w", pady=(0, 12))
+        folder_button_frame = Frame(right_frame, bg=self.colors["panel_bg"])
+        folder_button_frame.pack(anchor="w", pady=(0, section_gap))
 
         self.select_folder_button = Button(
             folder_button_frame,
             text="Select Folder",
             command=self.select_existing_folder,
+            **self.get_button_style("primary"),
         )
-        self.select_folder_button.pack(side="left", padx=(0, 8))
+        self.select_folder_button.pack(side="left", padx=(0, control_gap))
 
         self.add_folder_button = Button(
             folder_button_frame,
             text="Add Folder",
             command=self.add_folder,
+            **self.get_button_style("primary"),
         )
-        self.add_folder_button.pack(side="left", padx=(0, 8))
+        self.add_folder_button.pack(side="left", padx=(0, control_gap))
 
         self.remove_folder_button = Button(
             folder_button_frame,
             text="Remove",
             command=self.remove_folder,
+            **self.get_button_style("warning"),
         )
         self.remove_folder_button.pack(side="left")
 
         self.search_entry_container = Frame(
             right_frame,
-            bg=self.SEARCH_INPUT_BORDER_COLOR,
+            bg=self.colors["border_strong"],
             highlightthickness=0,
             bd=0,
             padx=1,
@@ -156,7 +174,7 @@ class MainWindow:
 
         search_entry_inner = Frame(
             self.search_entry_container,
-            bg=self.SEARCH_INPUT_BG_COLOR,
+            bg=self.colors["surface_bg"],
             padx=12,
             pady=8,
         )
@@ -168,9 +186,10 @@ class MainWindow:
             relief="flat",
             borderwidth=0,
             highlightthickness=0,
-            bg=self.SEARCH_INPUT_BG_COLOR,
-            insertbackground="#111827",
-            font=("Segoe UI", 10),
+            bg=self.colors["surface_bg"],
+            fg=self.colors["text"],
+            insertbackground=self.colors["text"],
+            font=self.fonts["body"],
         )
         self.new_folder_entry.pack(fill="x")
         self.new_folder_entry.bind("<KeyRelease>", self.on_folder_query_changed)
@@ -180,12 +199,20 @@ class MainWindow:
         self.add_folder_hint = Label(
             right_frame,
             text='No match found. Use "Add Folder".',
+            bg=self.colors["panel_bg"],
+            fg=self.colors["text_muted"],
+            font=self.fonts["body"],
         )
 
-        folder_browser_frame = Frame(right_frame)
-        folder_browser_frame.pack(fill=BOTH, expand=True, pady=(0, 12))
+        folder_browser_frame = Frame(right_frame, bg=self.colors["panel_bg"])
+        folder_browser_frame.pack(fill=BOTH, expand=True, pady=(0, section_gap))
 
-        self.folder_canvas = Canvas(folder_browser_frame, highlightthickness=0)
+        self.folder_canvas = Canvas(
+            folder_browser_frame,
+            highlightthickness=0,
+            bg=self.colors["panel_bg"],
+            bd=0,
+        )
         self.folder_canvas.pack(side=LEFT, fill=BOTH, expand=True)
 
         folder_scrollbar = Scrollbar(
@@ -196,7 +223,7 @@ class MainWindow:
         folder_scrollbar.pack(side="right", fill=Y)
         self.folder_canvas.configure(yscrollcommand=folder_scrollbar.set)
 
-        self.folder_grid = Frame(self.folder_canvas)
+        self.folder_grid = Frame(self.folder_canvas, bg=self.colors["panel_bg"])
         self.folder_canvas_window = self.folder_canvas.create_window(
             (0, 0),
             window=self.folder_grid,
@@ -321,10 +348,10 @@ class MainWindow:
         self.update_folder_list()
 
     def on_search_entry_focus_in(self, _event: object | None = None) -> None:
-        self.search_entry_container.config(bg=self.SEARCH_INPUT_FOCUS_COLOR)
+        self.search_entry_container.config(bg=self.colors["primary"])
 
     def on_search_entry_focus_out(self, _event: object | None = None) -> None:
-        self.search_entry_container.config(bg=self.SEARCH_INPUT_BORDER_COLOR)
+        self.search_entry_container.config(bg=self.colors["border_strong"])
 
     def get_filtered_folders(self) -> list[str]:
         query = self.folder_query.get().strip().lower()
@@ -349,9 +376,10 @@ class MainWindow:
 
     def create_folder_card(self, parent: Frame, folder: str) -> Frame:
         is_selected = folder == self.selected_folder
-        highlight_color = "#2f6fed" if is_selected else "#d6d9df"
+        highlight_color = self.colors["primary"] if is_selected else self.colors["border"]
         card = Frame(
             parent,
+            bg=self.colors["surface_bg"],
             bd=0,
             highlightthickness=2 if is_selected else 1,
             highlightbackground=highlight_color,
@@ -362,7 +390,12 @@ class MainWindow:
 
         preview_image = self.get_folder_preview_image(folder)
         preview_width, preview_height = FOLDER_CARD_PREVIEW_SIZE
-        preview_frame = Frame(card, width=preview_width, height=preview_height)
+        preview_frame = Frame(
+            card,
+            width=preview_width,
+            height=preview_height,
+            bg=self.colors["surface_bg"],
+        )
         preview_frame.pack(fill="x", expand=True)
         preview_frame.pack_propagate(False)
 
@@ -372,6 +405,7 @@ class MainWindow:
             width=preview_width,
             height=preview_height,
             bd=0,
+            bg=self.colors["surface_bg"],
         )
         preview_label.image = preview_image
         preview_label.pack(fill=BOTH, expand=True)
@@ -382,8 +416,9 @@ class MainWindow:
             wraplength=preview_width - 24,
             justify="left",
             anchor="w",
-            bg="#111827",
-            fg="#ffffff",
+            bg=self.colors["overlay"],
+            fg=self.colors["overlay_text"],
+            font=self.fonts["body_bold"],
             padx=12,
             pady=8,
         )
@@ -480,7 +515,7 @@ class MainWindow:
         preview_path = self.get_preview_image_path(folder)
         preview_size = FOLDER_CARD_PREVIEW_SIZE
         if preview_path is None:
-            image = Image.new("RGB", preview_size, color="#d9d9d9")
+            image = Image.new("RGB", preview_size, color=self.colors["preview_empty"])
         else:
             with Image.open(preview_path) as opened_image:
                 image = ImageOps.fit(opened_image.convert("RGB"), preview_size)
@@ -512,3 +547,31 @@ class MainWindow:
         new_column_count = self.get_folder_grid_column_count()
         if new_column_count != self.folder_grid_columns:
             self.update_folder_list()
+
+    def get_button_style(self, role: str) -> dict[str, object]:
+        if role == "primary":
+            background = self.colors["primary"]
+            active_background = self.colors["primary_active"]
+            foreground = self.colors["overlay_text"]
+        elif role == "warning":
+            background = self.colors["warning"]
+            active_background = self.colors["warning_active"]
+            foreground = self.colors["overlay_text"]
+        else:
+            background = self.colors["neutral"]
+            active_background = self.colors["neutral_active"]
+            foreground = self.colors["overlay_text"]
+
+        return {
+            "bg": background,
+            "fg": foreground,
+            "activebackground": active_background,
+            "activeforeground": foreground,
+            "relief": "flat",
+            "bd": 0,
+            "highlightthickness": 0,
+            "cursor": "hand2",
+            "font": self.fonts["body_bold"],
+            "padx": 14,
+            "pady": 8,
+        }
