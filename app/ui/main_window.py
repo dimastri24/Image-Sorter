@@ -38,38 +38,53 @@ class MainWindow:
         self.show_pending_message()
 
     def _build_layout(self) -> None:
+        section_padding_x = 20
+        section_padding_y = 16
+
         left_frame = Frame(self.root)
-        left_frame.pack(side="left", fill=BOTH, expand=True)
+        left_frame.pack(
+            side="left",
+            fill=BOTH,
+            expand=True,
+            padx=(section_padding_x, section_padding_x // 2),
+            pady=section_padding_y,
+        )
 
         self.select_image_folder_button = Button(
             left_frame,
             text="Select Image Folder",
             command=self.select_image_folder,
         )
-        self.select_image_folder_button.pack()
+        self.select_image_folder_button.pack(anchor="w", pady=(12, 16))
 
         self.image_label = Label(left_frame)
-        self.image_label.pack()
+        self.image_label.pack(fill=BOTH, expand=True, anchor="n")
 
         right_frame = Frame(self.root)
-        right_frame.pack(side="right", fill=BOTH, expand=True)
+        right_frame.pack(
+            side="right",
+            fill=BOTH,
+            expand=True,
+            padx=(section_padding_x // 2, section_padding_x),
+            pady=section_padding_y,
+        )
 
         folder_button_frame = Frame(right_frame)
-        folder_button_frame.pack(pady=20)
+        folder_button_frame.pack(anchor="w", pady=(0, 12))
 
         self.select_folder_button = Button(
             folder_button_frame,
             text="Select Folder",
             command=self.select_existing_folder,
         )
-        self.select_folder_button.pack(side="left")
+        self.select_folder_button.pack(side="left", padx=(0, 8))
 
         self.add_folder_button = Button(
             folder_button_frame,
             text="Add Folder",
             command=self.add_folder,
         )
-        self.add_folder_button.pack(side="left")
+        self.add_folder_button.pack(side="left", padx=(0, 8))
 
         self.remove_folder_button = Button(
             folder_button_frame,
@@ -83,7 +98,7 @@ class MainWindow:
             width=30,
             textvariable=self.folder_query,
         )
-        self.new_folder_entry.pack()
+        self.new_folder_entry.pack(fill="x", pady=(0, 8))
         self.new_folder_entry.bind("<KeyRelease>", self.on_folder_query_changed)
 
         self.add_folder_hint = Label(
@@ -92,7 +107,7 @@ class MainWindow:
         )
 
         folder_browser_frame = Frame(right_frame)
-        folder_browser_frame.pack(fill=BOTH, expand=True)
+        folder_browser_frame.pack(fill=BOTH, expand=True, pady=(8, 12))
 
         self.folder_canvas = Canvas(folder_browser_frame, highlightthickness=0)
         self.folder_canvas.pack(side=LEFT, fill=BOTH, expand=True)
@@ -115,21 +130,21 @@ class MainWindow:
         self.folder_canvas.bind("<Configure>", self.on_folder_canvas_configure)
 
         action_button_frame = Frame(right_frame)
-        action_button_frame.pack(pady=20)
+        action_button_frame.pack(anchor="w", pady=(0, 8))
 
         self.skip_button = Button(
             action_button_frame,
             text="Skip",
             command=self.show_next_image,
         )
-        self.skip_button.pack(side="left")
+        self.skip_button.pack(side="left", padx=(0, 8))
 
         self.move_button = Button(
             action_button_frame,
             text="Move Image",
             command=self.move_and_show_next,
         )
-        self.move_button.pack(side="left")
+        self.move_button.pack(side="left", padx=(0, 8))
 
         self.quit_button = Button(
             action_button_frame,
@@ -249,7 +264,7 @@ class MainWindow:
         should_show_hint = bool(query) and not self.filtered_folders
 
         if should_show_hint:
-            self.add_folder_hint.pack()
+            self.add_folder_hint.pack(anchor="w", pady=(0, 8))
             return
 
         self.add_folder_hint.pack_forget()
