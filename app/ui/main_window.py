@@ -76,8 +76,26 @@ class MainWindow:
             self.source_preview_frame,
             width=preview_width,
             height=preview_height,
+            text="Select an image folder to begin.",
         )
         self.image_label.pack(fill=BOTH, expand=True)
+
+        navigation_button_frame = Frame(left_frame)
+        navigation_button_frame.pack(anchor="w", pady=(0, 8))
+
+        self.back_button = Button(
+            navigation_button_frame,
+            text="Back",
+            command=self.show_previous_image,
+        )
+        self.back_button.pack(side="left", padx=(0, 8))
+
+        self.skip_button = Button(
+            navigation_button_frame,
+            text="Skip",
+            command=self.show_next_image,
+        )
+        self.skip_button.pack(side="left")
 
         right_frame = Frame(self.root)
         right_frame.pack(
@@ -152,13 +170,6 @@ class MainWindow:
 
         action_button_frame = Frame(right_frame)
         action_button_frame.pack(anchor="w", pady=(0, 8))
-
-        self.skip_button = Button(
-            action_button_frame,
-            text="Skip",
-            command=self.show_next_image,
-        )
-        self.skip_button.pack(side="left", padx=(0, 8))
 
         self.move_button = Button(
             action_button_frame,
@@ -235,15 +246,31 @@ class MainWindow:
     def show_next_image(self) -> None:
         image_path = self.image_service.get_next_image_path()
         if image_path is None:
-            self.quit()
+            self.show_empty_preview("No more images.")
+            self.show_pending_message()
             return
 
+        self.display_image(image_path)
+
+    def show_previous_image(self) -> None:
+        image_path = self.image_service.get_previous_image_path()
+        if image_path is None:
+            self.show_pending_message()
+            return
+
+        self.display_image(image_path)
+
+    def display_image(self, image_path: Path) -> None:
         with Image.open(image_path) as image:
             preview = image.copy()
 
         preview = ImageOps.contain(preview, SOURCE_PREVIEW_SIZE)
         self.current_photo = ImageTk.PhotoImage(preview)
-        self.image_label.config(image=self.current_photo)
+        self.image_label.config(image=self.current_photo, text="")
+
+    def show_empty_preview(self, message: str) -> None:
+        self.current_photo = None
+        self.image_label.config(image="", text=message)
 
     def move_and_show_next(self) -> None:
         selected_folder = self.get_selected_folder()

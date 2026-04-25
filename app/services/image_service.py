@@ -95,10 +95,26 @@ class ImageService:
     def get_next_image_path(self) -> Path | None:
         if self.root_folder is None or self.image_index >= len(self.images):
             self.current_image_name = None
+            self.pending_message = "No more images."
             return None
 
         self.current_image_name = self.images[self.image_index]
         self.image_index += 1
+        return self.root_folder / self.current_image_name
+
+    def get_previous_image_path(self) -> Path | None:
+        if self.root_folder is None or not self.images:
+            self.current_image_name = None
+            return None
+
+        current_index = self.image_index - 1
+        previous_index = current_index - 1
+        if previous_index < 0:
+            self.pending_message = "No previous image available."
+            return None
+
+        self.current_image_name = self.images[previous_index]
+        self.image_index = previous_index + 1
         return self.root_folder / self.current_image_name
 
     def move_current_image(self, target_folder: str) -> Path | None:
@@ -109,6 +125,11 @@ class ImageService:
         destination_folder = self._resolve_target_folder(target_folder)
         moved_path = move_file(source, destination_folder)
         print(f"Moved {source} to {destination_folder}")
+        if self.current_image_name in self.images:
+            current_index = self.images.index(self.current_image_name)
+            self.images.pop(current_index)
+            if self.image_index > current_index:
+                self.image_index -= 1
         self.current_image_name = None
         return moved_path
 
