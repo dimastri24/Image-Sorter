@@ -19,7 +19,7 @@ from tkinter import (
 
 from PIL import Image, ImageOps, ImageTk
 
-from ..config.settings import THUMBNAIL_SIZE
+from ..config.settings import SOURCE_PREVIEW_SIZE, THUMBNAIL_SIZE
 from ..services.image_service import ImageService
 
 
@@ -57,8 +57,21 @@ class MainWindow:
         )
         self.select_image_folder_button.pack(anchor="w", pady=(12, 16))
 
-        self.image_label = Label(left_frame)
-        self.image_label.pack(fill=BOTH, expand=True, anchor="n")
+        preview_width, preview_height = SOURCE_PREVIEW_SIZE
+        self.source_preview_frame = Frame(
+            left_frame,
+            width=preview_width,
+            height=preview_height,
+        )
+        self.source_preview_frame.pack(anchor="n", pady=(0, 16))
+        self.source_preview_frame.pack_propagate(False)
+
+        self.image_label = Label(
+            self.source_preview_frame,
+            width=preview_width,
+            height=preview_height,
+        )
+        self.image_label.pack(fill=BOTH, expand=True)
 
         right_frame = Frame(self.root)
         right_frame.pack(
@@ -215,7 +228,7 @@ class MainWindow:
         with Image.open(image_path) as image:
             preview = image.copy()
 
-        preview.thumbnail(THUMBNAIL_SIZE)
+        preview = ImageOps.contain(preview, SOURCE_PREVIEW_SIZE)
         self.current_photo = ImageTk.PhotoImage(preview)
         self.image_label.config(image=self.current_photo)
 
