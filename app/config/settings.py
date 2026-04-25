@@ -1,6 +1,7 @@
 from pathlib import Path
 
 APP_TITLE = "Image Sorter"
+INITIAL_WINDOW_SIZE = (1200, 720)
 THUMBNAIL_SIZE = (300, 300)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
