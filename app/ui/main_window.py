@@ -81,21 +81,31 @@ class MainWindow:
         self.image_label.pack(fill=BOTH, expand=True)
 
         navigation_button_frame = Frame(left_frame)
-        navigation_button_frame.pack(anchor="w", pady=(0, 8))
+        navigation_button_frame.pack(fill="x", pady=(0, 8))
+
+        navigation_left_frame = Frame(navigation_button_frame)
+        navigation_left_frame.pack(side="left")
 
         self.back_button = Button(
-            navigation_button_frame,
+            navigation_left_frame,
             text="Back",
             command=self.show_previous_image,
         )
         self.back_button.pack(side="left", padx=(0, 8))
 
         self.skip_button = Button(
-            navigation_button_frame,
+            navigation_left_frame,
             text="Skip",
             command=self.show_next_image,
         )
         self.skip_button.pack(side="left")
+
+        self.move_button = Button(
+            navigation_button_frame,
+            text="Move Image",
+            command=self.move_and_show_next,
+        )
+        self.move_button.pack(side="right")
 
         right_frame = Frame(self.root)
         right_frame.pack(
@@ -167,23 +177,6 @@ class MainWindow:
         self.folder_canvas.bind("<Configure>", self.on_folder_canvas_configure)
         self.bind_folder_browser_scroll(self.folder_canvas)
         self.bind_folder_browser_scroll(self.folder_grid)
-
-        action_button_frame = Frame(right_frame)
-        action_button_frame.pack(anchor="w", pady=(0, 8))
-
-        self.move_button = Button(
-            action_button_frame,
-            text="Move Image",
-            command=self.move_and_show_next,
-        )
-        self.move_button.pack(side="left", padx=(0, 8))
-
-        self.quit_button = Button(
-            action_button_frame,
-            text="Quit",
-            command=self.quit,
-        )
-        self.quit_button.pack(side="left")
 
     def select_image_folder(self) -> None:
         folder = filedialog.askdirectory()
@@ -282,9 +275,6 @@ class MainWindow:
 
     def get_selected_folder(self) -> str | None:
         return self.selected_folder
-
-    def quit(self) -> None:
-        self.root.destroy()
 
     def show_pending_message(self) -> None:
         message = self.image_service.consume_pending_message()
